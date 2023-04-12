@@ -1,6 +1,15 @@
 from BuildingsClass import *
 import math
 
+
+class DataDataBuildingsError(Exception):
+    pass
+
+
+class AreaError(DataDataBuildingsError):
+    pass
+
+
 class DataBuildings:
     meters_per_person = None
     position = None
@@ -21,7 +30,7 @@ class DataBuildings:
             self.levels = float('nan')
         else:
             levels_list = list(map(float, levels_list.split(';')))
-            self.levels = sum(levels_list)/len(levels_list)
+            self.levels = sum(levels_list) / len(levels_list)
 
         self.default_level = settings_build.default_level
         if math.isnan(self.levels):
@@ -32,6 +41,8 @@ class DataBuildings:
         self.addr_housenumber = geo_data_frame["addr:housenumber"]
         self.addr_street = geo_data_frame["addr:street"]
         self.type_build = geo_data_frame["building"]  # тип здания
+        if self.geometry.area < 1:
+            raise AreaError
         self.area = self.geometry.area * self.levels
         self.position = self.geometry.centroid
         self.meters_per_person = settings_build.meters_per_person

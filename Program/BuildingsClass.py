@@ -31,7 +31,7 @@ class Kindergarten(SettingsTargetBuild):
 class Hospital(SettingsTargetBuild):
     def __init__(self):
         self.matching_coeff = 0.05
-        self.service_radius = 2000
+        self.service_radius = 6000
         self.meters_per_person = 6
         self.default_level = 6
 
@@ -39,7 +39,7 @@ class Hospital(SettingsTargetBuild):
 class Stadium(SettingsTargetBuild):
     def __init__(self):
         self.matching_coeff = 0.05
-        self.service_radius = 4000
+        self.service_radius = 5000
         self.meters_per_person = 3
         self.default_level = 1
 

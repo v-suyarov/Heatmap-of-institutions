@@ -59,6 +59,7 @@ class SocialBuilding(DataBuildings):
     @classmethod
     def init(cls, residential_buildings, coords, preferences):
         super().init(preferences)
+
         cls.__init_residents_by_type(residential_buildings, cls.preferences["target"].keys())
         w = coords["w"]
         n = coords["n"]
@@ -79,37 +80,40 @@ class SocialBuilding(DataBuildings):
 
     @classmethod
     def fill_buildings(cls):
+        cls.residents_by_type = {key: items for key, items in cls.residents_by_type.items()
+                                 if key in cls.instances.keys()}
 
         for key, items in cls.residents_by_type.items():
-            item = items.pop(0)
-            while item is not None:
-                targets = [target for target in cls.instances[key]
-                           if item[0].position.distance(target.position) <= target.service_radius]
+            if len(items)>0:
+                item = items.pop(0)
+                while item is not None:
+                    targets = [target for target in cls.instances[key]
+                               if item[0].position.distance(target.position) <= target.service_radius]
 
-                if len(targets) > 0:
-                    min_people = min(targets, key=lambda target: target.people).people
-                    # будет содержать вложенные списки, 1 значение SocialBuildin, 2 значение коэфициент пропорции
-                    # то необходимо, чтобы равномерно распределить жителей и здания по таргетам
-                    if min_people < 1:
-                        pass
-                    targets = [[target, target.people / min_people] for target in targets]
-                    sum_people = sum(list(map(lambda target: target[1], targets)))
-                    unit_of_proportion = item[1] / sum_people
-                    targets = [[target, int(coef * unit_of_proportion)] for target, coef in targets]
-                    for target, selected_people in targets:
-                        target.add_fact_people(selected_people)
-                elif cls.__included_in_restricted_zone(item[0]):
-                    if item[0] not in cls.building_in_restricted_zone:
-                        cls.building_in_restricted_zone.append(item[0])
-                else:
-                    # print(f"Данный дом: {item[0].addr_street} {item[0].addr_housenumber}, не обслуживает не одно здание типа: {key}")
-                    if item[0] not in cls.out_of_service:
-                        cls.out_of_service.append(item[0])
+                    if len(targets) > 0:
+                        min_people = min(targets, key=lambda target: target.people).people
+                        # будет содержать вложенные списки, 1 значение SocialBuildin, 2 значение коэфициент пропорции
+                        # то необходимо, чтобы равномерно распределить жителей и здания по таргетам
+                        if min_people < 1:
+                            pass
+                        targets = [[target, target.people / min_people] for target in targets]
+                        sum_people = sum(list(map(lambda target: target[1], targets)))
+                        unit_of_proportion = item[1] / sum_people
+                        targets = [[target, int(coef * unit_of_proportion)] for target, coef in targets]
+                        for target, selected_people in targets:
+                            target.add_fact_people(selected_people)
+                    elif cls.__included_in_restricted_zone(item[0]):
+                        if item[0] not in cls.building_in_restricted_zone:
+                            cls.building_in_restricted_zone.append(item[0])
+                    else:
+                        # print(f"Данный дом: {item[0].addr_street} {item[0].addr_housenumber}, не обслуживает не одно здание типа: {key}")
+                        if item[0] not in cls.out_of_service:
+                            cls.out_of_service.append(item[0])
 
-                if len(items) > 1:
-                    item = items.pop(0)
-                else:
-                    item = None
+                    if len(items) > 1:
+                        item = items.pop(0)
+                    else:
+                        item = None
 
     @classmethod
     def __included_in_restricted_zone(cls, building):

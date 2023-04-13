@@ -10,6 +10,8 @@ from DataBuildings import *
 from SocialBuilding import SocialBuilding
 import time
 import cProfile
+
+
 def show_color_bar():
     colors = []
     for num in range(101):
@@ -146,7 +148,13 @@ settings_program = {"target": {"school": School(),
                                 "apartments": Apartments(),
                                 "house": House(),
                                 "detached": Detached(),
-                                "residential": Residential()
+                                "residential": Residential(),
+
+                                "barracks": Barracks(),
+                                "bungalow": Bungalow(),
+                                "dormitory": Dormitory(),
+                                "farm": Farm(),
+                                "hotel": Hotel(),
                                 },
                     "restricted_zone": 300,
                     "create_new_tab": True
@@ -217,7 +225,7 @@ print("Словарь зданий, для которых будем высчи�
 target_buildings = {}
 
 start_time = time.time()
-SocialBuilding.init(residential_buildings, coords=coords, preferences=preferences)
+SocialBuilding.init(residential_buildings, coords, preferences)
 end_time = time.time()
 print(f"SocialBuilding.init() отработал за {end_time - start_time} сек")
 
@@ -242,18 +250,40 @@ cProfile.run('SocialBuilding.fill_buildings()')
 # print(f"SocialBuilding.fill_buildings() отработал за {end_time - start_time} сек")
 
 
-# for key, items in target_buildings.items():
-#     for item in items:
-#         item.print()
+
 
 print("Отрисовка данных")
+
+
+# Создайте рисунок и ось
+fig, ax = plt.subplots()
+
+total_people = 0
+for key,    builds in residential_buildings.items():
+    total_people += sum(build.people for build in builds)
+
+
+out_of_service_people = sum(build.people for build in SocialBuilding.out_of_service)
+
+plt.title(f"Всего людей в выбранной области у выбранных типов продуцентов: {int(total_people)}\n"
+          f"Всего людей в выбранных продуцентах, которые не обслуживаются таргетами: {int(out_of_service_people)}")
+
+
+for key, values in building_dict.items():
+    for obj in values:
+        if obj.geometry.geom_type == 'Polygon':
+            x, y = obj.geometry.exterior.xy
+            ax.fill(x, y, alpha=0.5, fc="#5e6570", ec='none')
+
+
+
+
 
 target_view = [[key, item.occupancy_ratio, item.geometry] for key, items in target_buildings.items()
                for item in items if type(item.geometry) == shapely.Polygon]
 residential_polygons = [item.geometry for key, items in residential_buildings.items()
                         for item in items if type(item.geometry) == shapely.Polygon]
-# Создайте рисунок и ось
-fig, ax = plt.subplots()
+
 
 print("Отрисовка геометрий таргетных зданий")
 
@@ -284,6 +314,5 @@ for poly in map(lambda d_b: d_b.geometry, SocialBuilding.building_in_restricted_
         x, y = poly.exterior.xy
         ax.fill(x, y, alpha=1, fc='#ffbf00', ec='none')
 
-show_color_bar()
 plt.show()
 

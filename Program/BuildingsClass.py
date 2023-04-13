@@ -72,3 +72,33 @@ class Residential(SettingsBuild):
     def __init__(self):
         self.default_level = 4
         self.meters_per_person = 35
+
+
+class Barracks(SettingsBuild):
+    def __init__(self):
+        self.default_level = 2
+        self.meters_per_person = 10
+
+
+class Bungalow(SettingsBuild):
+    def __init__(self):
+        self.default_level = 1
+        self.meters_per_person = 25
+
+
+class Dormitory(SettingsBuild):
+    def __init__(self):
+        self.default_level = 6
+        self.meters_per_person = 15
+
+
+class Farm(SettingsBuild):
+    def __init__(self):
+        self.default_level = 1
+        self.meters_per_person = 35
+
+class Hotel(SettingsBuild):
+    def __init__(self):
+        self.default_level = 5
+        self.meters_per_person = 25
+

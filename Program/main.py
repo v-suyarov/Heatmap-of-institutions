@@ -1,20 +1,15 @@
-import geopandas.geodataframe
 import osmnx as ox
 import geopandas as gpd
 import pyclip
 import re
-import msvcrt
-import math
 import shapely
 import matplotlib.pyplot as plt
 from collections import defaultdict
 import webbrowser
-from functools import reduce
-from BuildingsClass import *
 from DataBuildings import *
 from SocialBuilding import SocialBuilding
-
-
+import time
+import cProfile
 def show_color_bar():
     colors = []
     for num in range(101):
@@ -38,12 +33,10 @@ def num_to_color(num):
         if num > 2:
             num = 2
     if num <= 1:
-        # Calculate green and blue values based on the input number
         green = int(num * 255)
         blue = int((1 - num) * 255)
         return "#{:02x}{:02x}{:02x}".format(0, green, blue)
     else:
-        # Calculate red and green values based on the input number
         red = int((num - 1) * 255)
         green = int((2 - num) * 255)
         return "#{:02x}{:02x}{:02x}".format(red, green, 0)
@@ -63,12 +56,10 @@ def show_map(buildings):
 def set_preferences(settings):
     def get_choices(options, unique_option=''):
         choices = {}
-        i = 1
-        for option in options:
+        for i, option in enumerate(options, start=1):
             key = str(i)
             choices[key] = option
             print(f"{key} - {choices[key]}")
-            i += 1
         if unique_option:
             print(f"0 - {unique_option}")
 
@@ -77,10 +68,8 @@ def set_preferences(settings):
     def input_is_correct(error_message, *args):
         while True:
             choice = input().split()
-
-            for func in args:
-                if func(choice):
-                    return choice
+            if any(func(choice) for func in args):
+                return choice
 
             print(error_message)
 
@@ -104,8 +93,8 @@ def set_preferences(settings):
             options_settings = list(settings.keys())
 
             print("В режиме расширенной настройки можно оценить загруженность нескольких типов учреждений одновременно")
-            print(
-                "Учтите, что если здание не обслуживается хотя бы одним из выбранных таргетов, то оно будет помечено как 'вне обслуживания'")
+            print("Учтите, что если здание не обслуживается хотя бы одним из выбранных таргетов, "
+                  "то оно будет помечено как 'вне обслуживания'")
             print("Укажите через пробел типы учреждений")
             current_settings = options_settings.pop(0)
             choices = get_choices(settings[current_settings], "выбрать все")
@@ -129,14 +118,22 @@ def set_preferences(settings):
             current_settings = options_settings.pop(0)
             print("Ограниченная зона - здания по краям карты могут помечаться, как 'вне обслуживания,",
                   "хотя возможно их обслуживают выбранные таргеты, просто они находятся за выбранной территорией.",
-                  "Ограниченная зона устанавливает, с какого растояния от края карты здание будет проверяться на 'вне обслуживания'",
+                  "Ограниченная зона устанавливает, "
+                  "с какого растояния от края карты здание будет проверяться на 'вне обслуживания'",
                   "Укажите растояние в метрах, вещественное число, разделитель '.'",
                   f"Рекомендуемое растояние: {settings[current_settings]}",
                   sep="\n")
 
-            choice = input_is_correct("Введите вещественно число, например: 500 или 500.55",
-                                      lambda choice: len(choice) == 1 and str.isdigit(choice[0].replace(".", '', 1)))
+            choice = input_is_correct("", lambda choice: len(choice) == 1 and str.isdigit(choice[0].replace(".", '', 1)))
             preferences[current_settings] = float(choice[0])
+
+            current_settings = options_settings.pop(0)
+            print("Вы хотите открыть новую вкладку для выбора территории?")
+            print("1 - да / 2 - нет")
+            choice = input_is_correct("Введите 1 или 2",
+                                      lambda choice: len(choice) == 1 and choice[0] in "12")
+            preferences[current_settings] = choice == "1"
+
         return preferences
 
 
@@ -152,26 +149,27 @@ settings_program = {"target": {"school": School(),
                                 "residential": Residential()
                                 },
                     "restricted_zone": 300,
-
+                    "create_new_tab": True
                     }
 preferences = set_preferences(settings_program)
 
-# n and s = lat, e and w = log
+if preferences["create_new_tab"]:
+    # n and s = lat, e and w = log
+    # получение координат выборки
+    webbrowser.open(
+        'http://prochitecture.com/blender-osm/extent/?blender_version=2.76&addon=blender-osm&addon_version=2.3.3', new=0)
+    pyclip.copy('')
 
-plt.show()
-# получение координат выборки
-webbrowser.open(
-    'http://prochitecture.com/blender-osm/extent/?blender_version=2.76&addon=blender-osm&addon_version=2.3.3', new=0)
-pyclip.copy('')
 while not re.fullmatch("\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+", pyclip.paste().decode("utf-8")):
     pass
 else:
     west, north, east, south, = list(map(float, str(pyclip.paste())[2:-1].split(',')))
+    coords = {"w": west,
+              "n": north,
+              "e": east,
+              "s": south}
 
-coords = {"w": west,
-         "n": north,
-         "e": east,
-         "s": south}
+
 
 print("Получить граф дорожной сети и все здания в заданном боксе")
 
@@ -181,7 +179,8 @@ print("Отфильтровать полученные геометрии, чт�
 
 buildings = geometries[geometries['building'].notnull()]
 
-# перевод чего-то там, чтобы площадь зданий посчиталсь в м квадратных, узнать текущее что то там - print(buildings.crs)
+# перевод ситемы координат, чтобы площадь зданий посчиталсь в м квадратных,
+# узнать текущее что то там - print(buildings.crs)
 buildings = buildings.to_crs(epsg=32638)
 
 print("Получение данных о зданиях")
@@ -194,13 +193,14 @@ for _, row in buildings.iterrows():
 
 print("Словарь зданий, из которых будем учитывать людей")
 
+DataBuildings.init(preferences)
 residential_buildings = {}
 for key in filter(lambda tag: tag in preferences["produce"].keys(), building_dict.keys()):
     single_type = []
     for item in building_dict[key]:
 
         try:
-            d_b = DataBuildings(item, preferences["produce"][key])
+            d_b = DataBuildings(item, key_build="produce")
             single_type.append(d_b)
         except AreaError:
             print("В DataBuildings передана некоректная площадь, данный обеъкт не будет участвовать в расчетах")
@@ -216,23 +216,35 @@ print("Словарь зданий, для которых будем высчи�
 
 target_buildings = {}
 
-SocialBuilding.init(residential_buildings, preferences['target'].keys(), preferences['target'], coords, preferences)
+start_time = time.time()
+SocialBuilding.init(residential_buildings, coords=coords, preferences=preferences)
+end_time = time.time()
+print(f"SocialBuilding.init() отработал за {end_time - start_time} сек")
+
+start_time = time.time()
 for key in filter(lambda tag: tag in preferences["target"].keys(), building_dict.keys()):
     single_type = []
     for item in building_dict[key]:
         try:
-            d_b = DataBuildings(item, preferences["target"][key])
-            target = SocialBuilding(d_b, preferences['target'][key], **residential_buildings)
+            target = SocialBuilding(item, key_build="target", **residential_buildings)
             single_type.append(target)
         except AreaError:
             print("В DataBuildings передана некоректная площадь, данный обеъкт не будет участвовать в расчетах")
             building_dict[key].remove(item)
     target_buildings[key] = single_type
-SocialBuilding.fill_buildings()
+end_time = time.time()
+print(f"Словарь зданий, для которых будем высчитывать индекс и отрисовывать,"
+      f" расчитался за {end_time - start_time} сек")
 
-for key, items in target_buildings.items():
-    for item in items:
-        item.print()
+# start_time = time.time()
+cProfile.run('SocialBuilding.fill_buildings()')
+# end_time = time.time()
+# print(f"SocialBuilding.fill_buildings() отработал за {end_time - start_time} сек")
+
+
+# for key, items in target_buildings.items():
+#     for item in items:
+#         item.print()
 
 print("Отрисовка данных")
 
@@ -246,7 +258,6 @@ fig, ax = plt.subplots()
 print("Отрисовка геометрий таргетных зданий")
 
 colors = {0: ""}
-# Переберите каждый полигон и добавьте его на ось
 for key, occupancy_ratio, geometry in target_view:
     if geometry.geom_type == 'Polygon':
         x, y = geometry.exterior.xy
@@ -266,7 +277,6 @@ for poly in map(lambda d_b: d_b.geometry, SocialBuilding.out_of_service):
         x, y = poly.exterior.xy
         ax.fill(x, y, alpha=1, fc='#fa6b6b', ec='none')
 
-
 print("Отрисовка геометрий зданий продуцентов, находятся в ограниченной зоне")
 
 for poly in map(lambda d_b: d_b.geometry, SocialBuilding.building_in_restricted_zone):
@@ -275,11 +285,5 @@ for poly in map(lambda d_b: d_b.geometry, SocialBuilding.building_in_restricted_
         ax.fill(x, y, alpha=1, fc='#ffbf00', ec='none')
 
 show_color_bar()
-# Отображение графика
 plt.show()
-# алгоритм для решения проблемы детских садов которые находятся рядом
-# создать словарь, ключ - тип таргета, значение - спискок зданий с количеством людей таргетного типа
-# заполнять таргетные здания последовательно и удалять людей из зданий по мере вмещения их в таргетное здание, если дом опустеет то удалить дом
-# список общи для всех, поэтому опусташенный дом уже не засчитается в других таргетах, так как его не бу дет в списке
-# после заполнения всех таргетов, могут остаться дома с людьми, в таком случаее происходит дозаполнение таргетов, как это делать - нужно продумать
-# в итоге поличи результат в котором человек А может одновременно быть клиентом только одного детского сада
+

@@ -6,29 +6,20 @@ from geopy import distance
 
 class SocialBuilding(DataBuildings):
     residents_by_type = {}
-    settings_target = {}
+
     instances = {}
     coords = {}
-    preferenses = {}
+
     out_of_service = []
     building_in_restricted_zone = []
 
-    def __init__(self, data_buildings: DataBuildings, settings_target_build: SettingsTargetBuild, **kwargs):
-        self.type_build = data_buildings.type_build
+    def __init__(self, geo_data_frame, key_build, **kwargs):
+        super().__init__(geo_data_frame, key_build)
+
         single_type_instances = self.instances.get(self.type_build, [])
         single_type_instances.append(self)
         self.instances[self.type_build] = single_type_instances
-        self.service_radius = settings_target_build.service_radius
-        self.levels = data_buildings.levels
-        self.people = data_buildings.people
-        self.area = data_buildings.area
-
-        self.addr_housenumber = data_buildings.addr_housenumber
-        self.addr_street = data_buildings.addr_street
-        self.position = data_buildings.position
-        self.geometry = data_buildings.geometry
-        self.default_level = data_buildings.default_level
-        self.meters_per_person = data_buildings.meters_per_person
+        self.service_radius = self.preferences["target"][self.type_build].service_radius
         self.fact_people = 0
 
         if self.people == 0:
@@ -58,18 +49,17 @@ class SocialBuilding(DataBuildings):
         # для каждого типа таргетного здания уставливаем здания с жителями
         residents_by_type = {}
         for type_target in types:
-            residents_by_type[type_target] = list(map(lambda data_build: [data_build,
-                                                                          int(data_build.people * cls.settings_target[
-                                                                              type_target].matching_coeff)],
-                                                      residentials))
+            residents_by_type[type_target] = list(map(lambda data_build:
+                                            [data_build, int(data_build.people * cls.preferences["target"][type_target].matching_coeff)],
+                                            residentials))
+
 
         cls.residents_by_type = residents_by_type
 
     @classmethod
-    def init(cls, residential_buildings, types, settings, coords, preferenses):
-        cls.preferenses = preferenses
-        cls.settings_target = settings
-        cls.__init_residents_by_type(residential_buildings, types)
+    def init(cls, residential_buildings, coords, preferences):
+        super().init(preferences)
+        cls.__init_residents_by_type(residential_buildings, cls.preferences["target"].keys())
         w = coords["w"]
         n = coords["n"]
         e = coords["e"]
@@ -142,7 +132,7 @@ class SocialBuilding(DataBuildings):
         res = False
         for point in (l, r, t, b):
             point_4326 = to_epsg4326([point[0], point[1]])
-            if distance.distance(building_4326, point_4326).m < cls.preferenses["restricted_zone"]:
+            if distance.distance(building_4326, point_4326).m < cls.preferences["restricted_zone"]:
                 res = True
 
         return res

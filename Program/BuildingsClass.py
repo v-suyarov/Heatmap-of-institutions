@@ -44,12 +44,6 @@ class Stadium(SettingsTargetBuild):
         self.default_level = 1
 
 
-class Building(SettingsBuild):
-    def __init__(self):
-        self.default_level = 2
-        self.meters_per_person = 35
-
-
 class Apartments(SettingsBuild):
     def __init__(self):
         self.default_level = 8
@@ -58,14 +52,14 @@ class Apartments(SettingsBuild):
 
 class House(SettingsBuild):
     def __init__(self):
-        self.default_level = 3
-        self.meters_per_person = 40
+        self.default_level = 2
+        self.meters_per_person = 25
 
 
 class Detached(SettingsBuild):
     def __init__(self):
         self.default_level = 1
-        self.meters_per_person = 35
+        self.meters_per_person = 30
 
 
 class Residential(SettingsBuild):

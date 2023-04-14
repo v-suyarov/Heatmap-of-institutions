@@ -80,8 +80,9 @@ def set_preferences(settings):
     print("1 - Быстрая настройка")
     print("2 - Расширенная настройка")
     while True:
-        choice = input()
-        if choice == "1":
+        choice = input_is_correct("Введите 1 или 2",
+                                  lambda choice: len(choice) == 1 and choice[0] in "12")
+        if choice[0] == "1":
             print("В режиме быстрой настройки все расчеты будут произведены только для одного типа учреждений")
             print("Выберите тип учреждения")
             current_settings = "target"
@@ -91,7 +92,7 @@ def set_preferences(settings):
                                       lambda choice: len(choice) == 1 and choice[0] in choices)
             preferences[current_settings] = {type_: settings[current_settings][type_] for key, type_ in
                                              choices.items() if choice[0] == "0" or key in choice}
-        elif choice == "2":
+        elif choice[0] == "2":
             options_settings = list(settings.keys())
 
             print("В режиме расширенной настройки можно оценить загруженность нескольких типов учреждений одновременно")
@@ -126,15 +127,43 @@ def set_preferences(settings):
                   f"Рекомендуемое растояние: {settings[current_settings]}",
                   sep="\n")
 
-            choice = input_is_correct("", lambda choice: len(choice) == 1 and str.isdigit(choice[0].replace(".", '', 1)))
+            choice = input_is_correct("Укажите растояние в метрах, вещественное число, разделитель '.'",
+                                      lambda choice: len(choice) == 1 and str.isdigit(choice[0].replace(".", '', 1)))
             preferences[current_settings] = float(choice[0])
 
-            current_settings = options_settings.pop(0)
-            print("Вы хотите открыть новую вкладку для выбора территории?")
-            print("1 - да / 2 - нет")
-            choice = input_is_correct("Введите 1 или 2",
-                                      lambda choice: len(choice) == 1 and choice[0] in "12")
-            preferences[current_settings] = choice == "1"
+        print("Данные OSM не всегда содержат информацию о типе здания")
+        print("Укажите, до какой сумарной площади, здания неопределнного типа будут помечаться как - 'частный дом'")
+        print("Укажите площадь в метрах квадратных, вещественное число, разделитель '.'")
+        print(f"Рекомендуемое значение: {settings['yes_to_produce_for_area_less']}")
+        choice = input_is_correct("Укажите растояние в метрах, вещественное число, разделитель '.'",
+                                  lambda choice: len(choice) == 1 and str.isdigit(choice[0].replace(".", '', 1)))
+        preferences["yes_to_produce_for_area_less"] = float(choice[0])
+
+        print("Вы хотите открыть новую вкладку для выбора территории?")
+        print("1 - да")
+        print("2 - нет")
+        choice = input_is_correct("Введите 1 или 2",
+                                  lambda choice: len(choice) == 1 and choice[0] in "12")
+        preferences["create_new_tab"] = choice[0] == "1"
+
+        try:
+            if re.fullmatch("\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+", pyclip.paste().decode("utf-8")):
+                print("В буфере находятся коректные координаты, хотите их использовать ?")
+                print("1 - да")
+                print("2 - нет")
+                choice = input_is_correct("Введите 1 или 2",
+                                          lambda choice_: len(choice) == 1 and choice[0] in "12")
+                if choice[0] == "1":
+                    print("Использованы координаты из буфера")
+                else:
+                    pyclip.copy('')
+                    print("Поместите координаты в буфер в системе EPSG:4326, в формате 'w s e n'")
+            else:
+                print("Поместите координаты в буфер в системе EPSG:4326, в формате 'w s e n'")
+        except:
+            print("Ошибка обработки буфера, буфер отчищен")
+            print("Поместите координаты в буфер в системе EPSG:4326, в формате 'w s e n'")
+            pyclip.copy('')
 
         return preferences
 
@@ -144,29 +173,33 @@ settings_program = {"target": {"school": School(),
                                "hospital": Hospital(),
                                "stadium": Stadium(),
                                },
-                    "produce": {"building": Building(),
-                                "apartments": Apartments(),
+                    "produce": {"apartments": Apartments(),
                                 "house": House(),
                                 "detached": Detached(),
                                 "residential": Residential(),
-
                                 "barracks": Barracks(),
                                 "bungalow": Bungalow(),
                                 "dormitory": Dormitory(),
                                 "farm": Farm(),
                                 "hotel": Hotel(),
+                                "yes": Detached()
                                 },
-                    "restricted_zone": 300,
-                    "create_new_tab": True
+                    "restricted_zone": 0,
+                    "create_new_tab": True,
+
+                    "yes_to_produce_for_area_less": 350,
                     }
+
+non_residential_building_tags = ["amenity", "shop", "historic", "tourism", "office", "leisure"]
 preferences = set_preferences(settings_program)
 
 if preferences["create_new_tab"]:
     # n and s = lat, e and w = log
+    pyclip.copy('')
     # получение координат выборки
     webbrowser.open(
-        'http://prochitecture.com/blender-osm/extent/?blender_version=2.76&addon=blender-osm&addon_version=2.3.3', new=0)
-    pyclip.copy('')
+        'http://prochitecture.com/blender-osm/extent/?blender_version=2.76&addon=blender-osm&addon_version=2.3.3',
+        new=0)
 
 while not re.fullmatch("\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+", pyclip.paste().decode("utf-8")):
     pass
@@ -176,8 +209,6 @@ else:
               "n": north,
               "e": east,
               "s": south}
-
-
 
 print("Получить граф дорожной сети и все здания в заданном боксе")
 
@@ -196,8 +227,9 @@ print("Получение данных о зданиях")
 # Создать словарь, где ключ - тип здания, а значение - список зданий данного типа
 building_dict = defaultdict(list)
 for _, row in buildings.iterrows():
-    building_type = row['building']
-    building_dict[building_type].append(row)
+    if row["geometry"].geom_type == 'Polygon':
+        building_type = row['building']
+        building_dict[building_type].append(row)
 
 print("Словарь зданий, из которых будем учитывать людей")
 
@@ -206,14 +238,20 @@ residential_buildings = {}
 for key in filter(lambda tag: tag in preferences["produce"].keys(), building_dict.keys()):
     single_type = []
     for item in building_dict[key]:
+        d_b = DataBuildings(item, key_build="produce")
 
-        try:
-            d_b = DataBuildings(item, key_build="produce")
+        if d_b.type_build != "yes":
             single_type.append(d_b)
-        except AreaError:
-            print("В DataBuildings передана некоректная площадь, данный обеъкт не будет участвовать в расчетах")
-            building_dict[key].remove(item)
-            print()
+        elif d_b.geometry.area < preferences["yes_to_produce_for_area_less"]:
+            single_type.append(d_b)
+        else:
+            res = [item.get(tag, float('nan')) for tag in non_residential_building_tags]
+            if all(type(value) == float for value in res):
+                a = item.get("landuse", False)
+                if a:
+                    print(a)
+                single_type.append(d_b)
+
     residential_buildings[key] = single_type
 
 # for key, items in residential_buildings.items():
@@ -233,14 +271,12 @@ start_time = time.time()
 for key in filter(lambda tag: tag in preferences["target"].keys(), building_dict.keys()):
     single_type = []
     for item in building_dict[key]:
-        try:
-            target = SocialBuilding(item, key_build="target", **residential_buildings)
-            single_type.append(target)
-        except AreaError:
-            print("В DataBuildings передана некоректная площадь, данный обеъкт не будет участвовать в расчетах")
-            building_dict[key].remove(item)
+        target = SocialBuilding(item, key_build="target", **residential_buildings)
+        single_type.append(target)
+
     target_buildings[key] = single_type
 end_time = time.time()
+
 print(f"Словарь зданий, для которых будем высчитывать индекс и отрисовывать,"
       f" расчитался за {end_time - start_time} сек")
 
@@ -250,44 +286,43 @@ cProfile.run('SocialBuilding.fill_buildings()')
 # print(f"SocialBuilding.fill_buildings() отработал за {end_time - start_time} сек")
 
 
-
-
 print("Отрисовка данных")
-
 
 # Создайте рисунок и ось
 fig, ax = plt.subplots()
 
 total_people = 0
-for key,    builds in residential_buildings.items():
+for key, builds in residential_buildings.items():
     total_people += sum(build.people for build in builds)
-
 
 out_of_service_people = sum(build.people for build in SocialBuilding.out_of_service)
 
 plt.title(f"Всего людей в выбранной области у выбранных типов продуцентов: {int(total_people)}\n"
           f"Всего людей в выбранных продуцентах, которые не обслуживаются таргетами: {int(out_of_service_people)}")
 
+for _, row in buildings.iterrows():
+    if row["geometry"].geom_type == 'Polygon':
+        building_type = row['building']
+        color = "#1a1c21"
+        alpha = 0.3
 
-for key, values in building_dict.items():
-    for obj in values:
-        if obj.geometry.geom_type == 'Polygon':
-            x, y = obj.geometry.exterior.xy
-            ax.fill(x, y, alpha=0.5, fc="#5e6570", ec='none')
+        res = [row.get(tag, float('nan')) for tag in non_residential_building_tags]
+        if all(type(value) == float for value in res) and building_type == "yes":
+            color = "#4c1852"
+            alpha = 1
+        elif not all(type(value) == float for value in res):
+            color = "#04525c"
 
-
-
-
+        x, y = row["geometry"].exterior.xy
+        ax.fill(x, y, alpha=alpha, color=color, ec='none')
 
 target_view = [[key, item.occupancy_ratio, item.geometry] for key, items in target_buildings.items()
                for item in items if type(item.geometry) == shapely.Polygon]
 residential_polygons = [item.geometry for key, items in residential_buildings.items()
                         for item in items if type(item.geometry) == shapely.Polygon]
 
-
 print("Отрисовка геометрий таргетных зданий")
 
-colors = {0: ""}
 for key, occupancy_ratio, geometry in target_view:
     if geometry.geom_type == 'Polygon':
         x, y = geometry.exterior.xy
@@ -315,4 +350,3 @@ for poly in map(lambda d_b: d_b.geometry, SocialBuilding.building_in_restricted_
         ax.fill(x, y, alpha=1, fc='#ffbf00', ec='none')
 
 plt.show()
-

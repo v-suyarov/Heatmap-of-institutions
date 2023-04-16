@@ -244,13 +244,6 @@ for key in filter(lambda tag: tag in preferences["produce"].keys(), building_dic
             single_type.append(d_b)
         elif d_b.geometry.area < preferences["yes_to_produce_for_area_less"]:
             single_type.append(d_b)
-        else:
-            res = [item.get(tag, float('nan')) for tag in non_residential_building_tags]
-            if all(type(value) == float for value in res):
-                a = item.get("landuse", False)
-                if a:
-                    print(a)
-                single_type.append(d_b)
 
     residential_buildings[key] = single_type
 
@@ -306,11 +299,7 @@ for _, row in buildings.iterrows():
         color = "#1a1c21"
         alpha = 0.3
 
-        res = [row.get(tag, float('nan')) for tag in non_residential_building_tags]
-        if all(type(value) == float for value in res) and building_type == "yes":
-            color = "#4c1852"
-            alpha = 1
-        elif not all(type(value) == float for value in res):
+        if building_type != "yes":
             color = "#04525c"
 
         x, y = row["geometry"].exterior.xy
@@ -333,14 +322,14 @@ print("Отрисовка геометрий зданий продуцентов
 for poly in residential_polygons:
     if poly.geom_type == 'Polygon':
         x, y = poly.exterior.xy
-        ax.fill(x, y, alpha=1, fc='#4c1852', ec='none')
+        ax.fill(x, y, alpha=0.5, fc='#4c1852', ec='none')
 
 print("Отрисовка геометрий зданий продуцентов, которые не вошли в радиус обслуживания")
 
 for poly in map(lambda d_b: d_b.geometry, SocialBuilding.out_of_service):
     if poly.geom_type == 'Polygon':
         x, y = poly.exterior.xy
-        ax.fill(x, y, alpha=1, fc='#fa6b6b', ec='none')
+        ax.fill(x, y, alpha=0.4, fc='#fa6b6b', ec='none')
 
 print("Отрисовка геометрий зданий продуцентов, находятся в ограниченной зоне")
 

@@ -14,12 +14,16 @@ class DataBuildings:
     preferences = {}
     def __init__(self, geo_data_frame, key_build):
         levels_list = str(geo_data_frame["building:levels"])
+        self.type_build = geo_data_frame["building"]  # тип здания
         if levels_list == 'nan':
             self.levels = float('nan')
         else:
-            levels_list = list(map(float, levels_list.split(';')))
-            self.levels = sum(levels_list) / len(levels_list)
-        self.type_build = geo_data_frame["building"]  # тип здания
+            try:
+                levels_list = list(map(float, levels_list.split(';')))
+                self.levels = sum(levels_list) / len(levels_list)
+            except:
+                self.levels = self.preferences[key_build][self.type_build].default_level
+
         self.default_level = self.preferences[key_build][self.type_build].default_level
         if math.isnan(self.levels):
             self.levels = self.default_level

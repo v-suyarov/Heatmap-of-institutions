@@ -201,7 +201,7 @@ if preferences["create_new_tab"]:
         'http://prochitecture.com/blender-osm/extent/?blender_version=2.76&addon=blender-osm&addon_version=2.3.3',
         new=0)
 
-while not re.fullmatch("\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+", pyclip.paste().decode("utf-8")):
+while not re.fullmatch("-?\d+\.\d+,-?\d+\.\d+,-?\d+\.\d+,-?\d+\.\d+", pyclip.paste().decode("utf-8")):
     pass
 else:
     west, north, east, south, = list(map(float, str(pyclip.paste())[2:-1].split(',')))
@@ -238,14 +238,17 @@ residential_buildings = {}
 for key in filter(lambda tag: tag in preferences["produce"].keys(), building_dict.keys()):
     single_type = []
     for item in building_dict[key]:
-        d_b = DataBuildings(item, key_build="produce")
+        try:
+            d_b = DataBuildings(item, key_build="produce")
+            if d_b.type_build != "yes":
+                single_type.append(d_b)
+            elif d_b.geometry.area < preferences["yes_to_produce_for_area_less"]:
+                single_type.append(d_b)
+            residential_buildings[key] = single_type
+        except:
+            print(f"Площадь здания была слишком маленькой, это здание не будет учитываться в расчетах")
 
-        if d_b.type_build != "yes":
-            single_type.append(d_b)
-        elif d_b.geometry.area < preferences["yes_to_produce_for_area_less"]:
-            single_type.append(d_b)
 
-    residential_buildings[key] = single_type
 
 # for key, items in residential_buildings.items():
 #     for item in items:
@@ -322,14 +325,14 @@ print("Отрисовка геометрий зданий продуцентов
 for poly in residential_polygons:
     if poly.geom_type == 'Polygon':
         x, y = poly.exterior.xy
-        ax.fill(x, y, alpha=0.5, fc='#4c1852', ec='none')
+        ax.fill(x, y, alpha=0.8, fc='#3d0a19', ec='none')
 
 print("Отрисовка геометрий зданий продуцентов, которые не вошли в радиус обслуживания")
 
 for poly in map(lambda d_b: d_b.geometry, SocialBuilding.out_of_service):
     if poly.geom_type == 'Polygon':
         x, y = poly.exterior.xy
-        ax.fill(x, y, alpha=0.4, fc='#fa6b6b', ec='none')
+        ax.fill(x, y, alpha=0.8, fc='#a31c44', ec='none')
 
 print("Отрисовка геометрий зданий продуцентов, находятся в ограниченной зоне")
 

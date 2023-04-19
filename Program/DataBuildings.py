@@ -1,29 +1,30 @@
 from BuildingsClass import *
 import math
 
+
+class DataDataBuildingsError(Exception):
+    pass
+
+
+class AreaError(DataDataBuildingsError):
+    pass
+
+
 class DataBuildings:
-    meters_per_person = None
-    position = None
-    area = None
-    people = None
-
-    levels = None
-    geometry = None
-    addr_housenumber = None
-    addr_street = None
-    type_build = None
-
-    default_level = None
-
-    def __init__(self, geo_data_frame, settings_build: SettingsBuild):
+    preferences = {}
+    def __init__(self, geo_data_frame, key_build):
         levels_list = str(geo_data_frame["building:levels"])
+        self.type_build = geo_data_frame["building"]  # тип здания
         if levels_list == 'nan':
             self.levels = float('nan')
         else:
-            levels_list = list(map(float, levels_list.split(';')))
-            self.levels = sum(levels_list)/len(levels_list)
+            try:
+                levels_list = list(map(float, levels_list.split(';')))
+                self.levels = sum(levels_list) / len(levels_list)
+            except:
+                self.levels = self.preferences[key_build][self.type_build].default_level
 
-        self.default_level = settings_build.default_level
+        self.default_level = self.preferences[key_build][self.type_build].default_level
         if math.isnan(self.levels):
             self.levels = self.default_level
         else:
@@ -31,10 +32,12 @@ class DataBuildings:
         self.geometry = geo_data_frame["geometry"]
         self.addr_housenumber = geo_data_frame["addr:housenumber"]
         self.addr_street = geo_data_frame["addr:street"]
-        self.type_build = geo_data_frame["building"]  # тип здания
+
+        if self.geometry.area < 1:
+            raise AreaError
         self.area = self.geometry.area * self.levels
         self.position = self.geometry.centroid
-        self.meters_per_person = settings_build.meters_per_person
+        self.meters_per_person = self.preferences[key_build][self.type_build].meters_per_person
         self.people = self.area / self.meters_per_person
 
     def print(self, end="\n"):
@@ -47,3 +50,7 @@ class DataBuildings:
         print(f"Addr_housenumber: {self.addr_housenumber}", end=" ")
         print(f"Position: {self.position}", end=" ")
         print(f"Polygon: {self.geometry}", end=end)
+
+    @classmethod
+    def init(cls, preferences):
+        cls.preferences = preferences

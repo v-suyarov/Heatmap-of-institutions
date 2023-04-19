@@ -31,7 +31,7 @@ class Kindergarten(SettingsTargetBuild):
 class Hospital(SettingsTargetBuild):
     def __init__(self):
         self.matching_coeff = 0.05
-        self.service_radius = 2000
+        self.service_radius = 6000
         self.meters_per_person = 6
         self.default_level = 6
 
@@ -39,15 +39,9 @@ class Hospital(SettingsTargetBuild):
 class Stadium(SettingsTargetBuild):
     def __init__(self):
         self.matching_coeff = 0.05
-        self.service_radius = 4000
+        self.service_radius = 5000
         self.meters_per_person = 3
         self.default_level = 1
-
-
-class Building(SettingsBuild):
-    def __init__(self):
-        self.default_level = 2
-        self.meters_per_person = 35
 
 
 class Apartments(SettingsBuild):
@@ -58,17 +52,47 @@ class Apartments(SettingsBuild):
 
 class House(SettingsBuild):
     def __init__(self):
-        self.default_level = 3
-        self.meters_per_person = 40
+        self.default_level = 2
+        self.meters_per_person = 25
 
 
 class Detached(SettingsBuild):
     def __init__(self):
         self.default_level = 1
-        self.meters_per_person = 35
+        self.meters_per_person = 30
 
 
 class Residential(SettingsBuild):
     def __init__(self):
         self.default_level = 4
         self.meters_per_person = 35
+
+
+class Barracks(SettingsBuild):
+    def __init__(self):
+        self.default_level = 2
+        self.meters_per_person = 10
+
+
+class Bungalow(SettingsBuild):
+    def __init__(self):
+        self.default_level = 1
+        self.meters_per_person = 25
+
+
+class Dormitory(SettingsBuild):
+    def __init__(self):
+        self.default_level = 6
+        self.meters_per_person = 15
+
+
+class Farm(SettingsBuild):
+    def __init__(self):
+        self.default_level = 1
+        self.meters_per_person = 35
+
+class Hotel(SettingsBuild):
+    def __init__(self):
+        self.default_level = 5
+        self.meters_per_person = 25
+

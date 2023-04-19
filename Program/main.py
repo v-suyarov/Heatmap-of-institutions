@@ -8,8 +8,6 @@ from collections import defaultdict
 import webbrowser
 from DataBuildings import *
 from SocialBuilding import SocialBuilding
-import time
-import cProfile
 
 
 def show_color_bar():
@@ -190,7 +188,6 @@ settings_program = {"target": {"school": School(),
                     "yes_to_produce_for_area_less": 350,
                     }
 
-non_residential_building_tags = ["amenity", "shop", "historic", "tourism", "office", "leisure"]
 preferences = set_preferences(settings_program)
 
 if preferences["create_new_tab"]:
@@ -248,8 +245,6 @@ for key in filter(lambda tag: tag in preferences["produce"].keys(), building_dic
         except:
             print(f"Площадь здания была слишком маленькой, это здание не будет учитываться в расчетах")
 
-
-
 # for key, items in residential_buildings.items():
 #     for item in items:
 #         item.print()
@@ -257,13 +252,7 @@ for key in filter(lambda tag: tag in preferences["produce"].keys(), building_dic
 print("Словарь зданий, для которых будем высчитывать индекс и отрисовывать")
 
 target_buildings = {}
-
-start_time = time.time()
 SocialBuilding.init(residential_buildings, coords, preferences)
-end_time = time.time()
-print(f"SocialBuilding.init() отработал за {end_time - start_time} сек")
-
-start_time = time.time()
 for key in filter(lambda tag: tag in preferences["target"].keys(), building_dict.keys()):
     single_type = []
     for item in building_dict[key]:
@@ -271,22 +260,11 @@ for key in filter(lambda tag: tag in preferences["target"].keys(), building_dict
         single_type.append(target)
 
     target_buildings[key] = single_type
-end_time = time.time()
-
-print(f"Словарь зданий, для которых будем высчитывать индекс и отрисовывать,"
-      f" расчитался за {end_time - start_time} сек")
-
-# start_time = time.time()
-cProfile.run('SocialBuilding.fill_buildings()')
-# end_time = time.time()
-# print(f"SocialBuilding.fill_buildings() отработал за {end_time - start_time} сек")
-
 
 print("Отрисовка данных")
 
 # Создайте рисунок и ось
 fig, ax = plt.subplots()
-
 total_people = 0
 for key, builds in residential_buildings.items():
     total_people += sum(build.people for build in builds)

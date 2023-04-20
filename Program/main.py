@@ -8,7 +8,7 @@ from collections import defaultdict
 import webbrowser
 from DataBuildings import *
 from SocialBuilding import SocialBuilding
-
+from array import array
 
 def show_color_bar():
     colors = []
@@ -145,7 +145,7 @@ def set_preferences(settings):
         preferences["create_new_tab"] = choice[0] == "1"
 
         try:
-            if re.fullmatch("\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+", pyclip.paste().decode("utf-8")):
+            if re.fullmatch(re_coordinates, pyclip.paste().decode("utf-8")):
                 print("В буфере находятся коректные координаты, хотите их использовать ?")
                 print("1 - да")
                 print("2 - нет")
@@ -187,7 +187,7 @@ settings_program = {"target": {"school": School(),
 
                     "yes_to_produce_for_area_less": 350,
                     }
-
+re_coordinates = "-?\d+\.\d+,-?\d+\.\d+,-?\d+\.\d+,-?\d+\.\d+"
 preferences = set_preferences(settings_program)
 
 if preferences["create_new_tab"]:
@@ -198,7 +198,7 @@ if preferences["create_new_tab"]:
         'http://prochitecture.com/blender-osm/extent/?blender_version=2.76&addon=blender-osm&addon_version=2.3.3',
         new=0)
 
-while not re.fullmatch("-?\d+\.\d+,-?\d+\.\d+,-?\d+\.\d+,-?\d+\.\d+", pyclip.paste().decode("utf-8")):
+while not re.fullmatch(re_coordinates, pyclip.paste().decode("utf-8")):
     pass
 else:
     west, north, east, south, = list(map(float, str(pyclip.paste())[2:-1].split(',')))
@@ -260,63 +260,48 @@ for key in filter(lambda tag: tag in preferences["target"].keys(), building_dict
         single_type.append(target)
 
     target_buildings[key] = single_type
+SocialBuilding.fill_buildings()
 
+buildings = buildings.to_crs(epsg=4326)
 print("Отрисовка данных")
 
-# Создайте рисунок и ось
+# Создать рисунок и ось
 fig, ax = plt.subplots()
 total_people = 0
 for key, builds in residential_buildings.items():
     total_people += sum(build.people for build in builds)
 
 out_of_service_people = sum(build.people for build in SocialBuilding.out_of_service)
-
+target_view = [[key, item.occupancy_ratio, item.polygon_epsg4326] for key, items in target_buildings.items()
+               for item in items]
+residential_polygons = [item.polygon_epsg4326 for key, items in residential_buildings.items()
+                        for item in items]
 plt.title(f"Всего людей в выбранной области у выбранных типов продуцентов: {int(total_people)}\n"
           f"Всего людей в выбранных продуцентах, которые не обслуживаются таргетами: {int(out_of_service_people)}")
-
+# отрисовка всех зданий, у которых есть геометрия, следующие отрисовки будут перекрывать эту
 for _, row in buildings.iterrows():
     if row["geometry"].geom_type == 'Polygon':
         building_type = row['building']
         color = "#1a1c21"
         alpha = 0.3
-
         if building_type != "yes":
             color = "#04525c"
-
-        x, y = row["geometry"].exterior.xy
-        ax.fill(x, y, alpha=alpha, color=color, ec='none')
-
-target_view = [[key, item.occupancy_ratio, item.geometry] for key, items in target_buildings.items()
-               for item in items if type(item.geometry) == shapely.Polygon]
-residential_polygons = [item.geometry for key, items in residential_buildings.items()
-                        for item in items if type(item.geometry) == shapely.Polygon]
+        ax.fill(*row["geometry"].exterior.xy, alpha=alpha, color=color, ec='none')
 
 print("Отрисовка геометрий таргетных зданий")
-
-for key, occupancy_ratio, geometry in target_view:
-    if geometry.geom_type == 'Polygon':
-        x, y = geometry.exterior.xy
-        ax.fill(x, y, fc=num_to_color(occupancy_ratio), ec='none')
+for key, occupancy_ratio, polygon in target_view:
+        ax.fill(*polygon, fc=num_to_color(occupancy_ratio), ec='none')
 
 print("Отрисовка геометрий зданий продуцентов")
-
-for poly in residential_polygons:
-    if poly.geom_type == 'Polygon':
-        x, y = poly.exterior.xy
-        ax.fill(x, y, alpha=0.8, fc='#3d0a19', ec='none')
+for polygon in residential_polygons:
+        ax.fill(*polygon, alpha=0.8, fc='#3d0a19', ec='none')
 
 print("Отрисовка геометрий зданий продуцентов, которые не вошли в радиус обслуживания")
-
-for poly in map(lambda d_b: d_b.geometry, SocialBuilding.out_of_service):
-    if poly.geom_type == 'Polygon':
-        x, y = poly.exterior.xy
-        ax.fill(x, y, alpha=0.8, fc='#a31c44', ec='none')
+for polygon in map(lambda d_b: d_b.polygon_epsg4326, SocialBuilding.out_of_service):
+        ax.fill(*polygon, alpha=0.8, fc='#a31c44', ec='none')
 
 print("Отрисовка геометрий зданий продуцентов, находятся в ограниченной зоне")
-
-for poly in map(lambda d_b: d_b.geometry, SocialBuilding.building_in_restricted_zone):
-    if poly.geom_type == 'Polygon':
-        x, y = poly.exterior.xy
-        ax.fill(x, y, alpha=1, fc='#ffbf00', ec='none')
+for polygon in map(lambda d_b: d_b.polygon_epsg4326, SocialBuilding.building_in_restricted_zone):
+        ax.fill(*polygon, alpha=1, fc='#ffbf00', ec='none')
 
 plt.show()

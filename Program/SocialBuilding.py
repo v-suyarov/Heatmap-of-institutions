@@ -2,6 +2,7 @@ import math
 from DataBuildings import *
 import pyproj
 from geopy import distance
+import sys
 
 
 class SocialBuilding(DataBuildings):
@@ -50,9 +51,9 @@ class SocialBuilding(DataBuildings):
         residents_by_type = {}
         for type_target in types:
             residents_by_type[type_target] = list(map(lambda data_build:
-                                            [data_build, int(data_build.people * cls.preferences["target"][type_target].matching_coeff)],
-                                            residentials))
-
+                                                      [data_build, int(data_build.people * cls.preferences["target"][
+                                                          type_target].matching_coeff)],
+                                                      residentials))
 
         cls.residents_by_type = residents_by_type
 
@@ -82,11 +83,17 @@ class SocialBuilding(DataBuildings):
     def fill_buildings(cls):
         cls.residents_by_type = {key: items for key, items in cls.residents_by_type.items()
                                  if key in cls.instances.keys()}
-
+        all_iteration = sum([len(items) for key, items in cls.residents_by_type.items()])
+        i = 0
         for key, items in cls.residents_by_type.items():
-            if len(items)>0:
+            if len(items) > 0:
+
                 item = items.pop(0)
                 while item is not None:
+                    i += 1
+                    p = round((i / all_iteration)*100,2)
+                    sys.stdout.write(f"\rLoading: {p}%")
+                    sys.stdout.flush()
                     targets = [target for target in cls.instances[key]
                                if item[0].position.distance(target.position) <= target.service_radius]
 
@@ -114,16 +121,12 @@ class SocialBuilding(DataBuildings):
                         item = items.pop(0)
                     else:
                         item = None
-
+        sys.stdout.write(f"\rLoading: {100}%")
+        sys.stdout.flush()
+        print()
     @classmethod
     def __included_in_restricted_zone(cls, building):
-        def to_epsg4326(point1):
-            crs4326 = pyproj.CRS('EPSG:4326')
-            crs32638 = pyproj.CRS('EPSG:32638')
-            transformer = pyproj.Transformer.from_crs(crs32638, crs4326)
 
-            point = transformer.transform(point1[0], point1[1])
-            return point[::-1]
 
         l_t = cls.coords["l_t"]
         r_b = cls.coords["r_b"]
@@ -132,10 +135,10 @@ class SocialBuilding(DataBuildings):
         t = [building.position.x, l_t[1]]
         b = [building.position.x, r_b[1]]
 
-        building_4326 = to_epsg4326([building.position.x, building.position.y])
+        building_4326 = cls.to_epsg4326([building.position.x, building.position.y])
         res = False
         for point in (l, r, t, b):
-            point_4326 = to_epsg4326([point[0], point[1]])
+            point_4326 = cls.to_epsg4326([point[0], point[1]])
             if distance.distance(building_4326, point_4326).m < cls.preferences["restricted_zone"]:
                 res = True
 

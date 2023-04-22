@@ -1,4 +1,3 @@
-from BuildingsClass import *
 import math
 import pyproj
 

@@ -1,4 +1,3 @@
-import math
 from DataBuildings import *
 import pyproj
 from geopy import distance

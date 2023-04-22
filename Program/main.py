@@ -2,13 +2,13 @@ import osmnx as ox
 import geopandas as gpd
 import pyclip
 import re
-import shapely
+from BuildingsClass import *
 import matplotlib.pyplot as plt
 from collections import defaultdict
 import webbrowser
 from DataBuildings import *
 from SocialBuilding import SocialBuilding
-from array import array
+
 
 def show_color_bar():
     colors = []

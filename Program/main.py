@@ -286,6 +286,7 @@ for _, row in buildings.iterrows():
         alpha = 0.3
         if building_type != "yes":
             color = "#04525c"
+
         ax.fill(*row["geometry"].exterior.xy, alpha=alpha, color=color, ec='none')
 
 print("Отрисовка геометрий таргетных зданий")

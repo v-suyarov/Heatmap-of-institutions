@@ -10,6 +10,7 @@ class SettingsTargetBuild(SettingsBuild):
         self.meters_per_person = 5
         self.matching_coeff = 0.5
         self.service_radius = 1000
+        self.maximize_service_radius = 3000
 
 
 class School(SettingsTargetBuild):
@@ -18,14 +19,14 @@ class School(SettingsTargetBuild):
         self.service_radius = 1000
         self.meters_per_person = 3
         self.default_level = 3
-
+        self.maximize_service_radius = 4000
 
 class Kindergarten(SettingsTargetBuild):
     def __init__(self):
-        self.matching_coeff = 0.1
+        self.matching_coeff = 0.10
         self.service_radius = 500
         self.meters_per_person = 3
-        self.default_level = 3
+        self.maximize_service_radius = 3000
 
 
 class Hospital(SettingsTargetBuild):
@@ -34,7 +35,7 @@ class Hospital(SettingsTargetBuild):
         self.service_radius = 6000
         self.meters_per_person = 6
         self.default_level = 6
-
+        self.maximize_service_radius = 10000
 
 class Stadium(SettingsTargetBuild):
     def __init__(self):
@@ -42,7 +43,7 @@ class Stadium(SettingsTargetBuild):
         self.service_radius = 5000
         self.meters_per_person = 3
         self.default_level = 1
-
+        self.maximize_service_radius = 10000
 
 class Apartments(SettingsBuild):
     def __init__(self):

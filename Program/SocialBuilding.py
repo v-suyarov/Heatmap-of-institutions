@@ -21,6 +21,7 @@ class SocialBuilding(DataBuildings):
         single_type_instances.append(self)
         self.instances[self.type_build] = single_type_instances
         self.service_radius = self.preferences["target"][self.type_build].service_radius
+        self.maximize_service_radius = self.preferences["target"][self.type_build].maximize_service_radius
         self.fact_people = 0
 
         if self.people == 0:
@@ -80,7 +81,13 @@ class SocialBuilding(DataBuildings):
         cls.coords = coords
 
     @classmethod
-    def fill_buildings(cls):
+    def fill_buildings(cls, mode="standard"):
+        cls.out_of_service = []
+        modes = {"standard": {"radius": "service_radius",
+                              },
+                 "maximize": {"radius": "maximize_service_radius",
+                              },
+                 }
         cls.residents_by_type = {key: items for key, items in cls.residents_by_type.items()
                                  if key in cls.instances.keys()}
         all_iteration = sum([len(items) for key, items in cls.residents_by_type.items()])
@@ -94,15 +101,14 @@ class SocialBuilding(DataBuildings):
                     p = round((i / all_iteration)*100,2)
                     sys.stdout.write(f"\rLoading: {p}%")
                     sys.stdout.flush()
+
                     targets = [target for target in cls.instances[key]
-                               if item[0].position.distance(target.position) <= target.service_radius]
+                               if item[0].position.distance(target.position) <= target.__dict__[modes[mode]["radius"]]]
 
                     if len(targets) > 0:
                         min_people = min(targets, key=lambda target: target.people).people
                         # будет содержать вложенные списки, 1 значение SocialBuildin, 2 значение коэфициент пропорции
-                        # то необходимо, чтобы равномерно распределить жителей и здания по таргетам
-                        if min_people < 1:
-                            pass
+                        # это необходимо, чтобы равномерно распределить жителей и здания по таргетам
                         targets = [[target, target.people / min_people] for target in targets]
                         sum_people = sum(list(map(lambda target: target[1], targets)))
                         unit_of_proportion = item[1] / sum_people

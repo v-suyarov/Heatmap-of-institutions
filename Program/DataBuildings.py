@@ -69,4 +69,4 @@ class DataBuildings:
     @classmethod
     def to_epsg4326(cls, point):
         new_point = cls.__transformer.transform(point[0], point[1])
-        return new_point[::-1]
+        return new_point
